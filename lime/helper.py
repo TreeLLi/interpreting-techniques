@@ -22,20 +22,48 @@ Converter: transform images to binary representations
 
 class Convertor:
     def __init__(self, img):
-        set_img(img)
+        if not isinstance(img, np.ndarray):
+            img = np.asarray(img)
+        self.img = img
 
-    def set_img(self, img):
-        self.origin = img
-        self.seg = np.zeros(img.shape[:-1])
-        # TODO - segment image for binary representaton
+    @property
+    def seg(self):
+        return self.__seg
+
+    @property
+    def br(self):
+        return self.__br
+
+    @property
+    def img(self):
+        return self.__img
+    
+    @img.setter
+    def img(self, img):
+        self.__img = img
+        seg = np.zeros(img.shape[:-1], dtype=np.int8)
         # each digit represents a segmentation id
-        
-    def get_binary_rep(self):
-        return self.origin
+        it = np.nditer(seg, flags=["multi_index"])
+        column_size = seg.shape[0] // 2 + 1
+        while not it.finished:
+            i = it.multi_index
+            seg[i] = (i[0]//2)*column_size + i[1]//2
+            it.iternext()
+        self.__seg = seg
+        self.__br = np.ones(int(seg[-1, -1])+1, dtype=np.int8)
         
     def retrieve_img(self, br):
-        return self.origin
+        img = self.img
+        r = np.zeros_like(img)
+        it = np.nditer(self.seg, flags=["multi_index"])
+        for seg_id in it:
+            idx = it.multi_index
+            r[idx] = img[idx] if br[seg_id]==1 else [0, 0, 0]
+        return r
         
+    def retrieve_imgs(self, brs):
+        return [self.retrieve_img(br) for br in brs]
+    
     
 '''
 Distance: compute the distance between two points
